@@ -27,12 +27,23 @@ function useApiHealth() {
   return alive
 }
 
+function getPageFromHash() {
+  return window.location.hash === '#/leaderboard' ? 'leaderboard' : 'home'
+}
+
 export default function App() {
   const [scanData, setScanData] = useState(null)
   const [scanning, setScanning] = useState(false)
   const [activeScanId, setActiveScanId] = useState(null)
   const [leaderboardRefreshToken, setLeaderboardRefreshToken] = useState(0)
+  const [page, setPage] = useState(getPageFromHash)
   const apiAlive = useApiHealth()
+
+  useEffect(() => {
+    const onHashChange = () => setPage(getPageFromHash())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   const handleScanComplete = useCallback((data) => {
     setScanData(data)
@@ -99,7 +110,10 @@ export default function App() {
           </div>
 
           <div className="header-right">
-            <a href="#leaderboard" className="header-link">
+            <a href="#/" className="header-link">
+              Home
+            </a>
+            <a href="#/leaderboard" className="header-link">
               Leaderboard
             </a>
             <a href="/docs" className="header-link" target="_blank" rel="noopener noreferrer">
@@ -120,33 +134,34 @@ export default function App() {
 
       {/* Main content */}
       <main className="main-content">
-        {/* Hero / Scan form */}
-        <ScanForm
-          onScanComplete={wrappedComplete}
-          onScanStart={handleScanStart}
-          onScanError={wrappedError}
-        />
-
-        {/* Terminal-style scan progress */}
-        <ScanProgress active={scanning} />
-
-        {/* Leaderboard (top section) */}
-        <div id="leaderboard">
+        {page === 'leaderboard' ? (
           <Leaderboard refreshToken={leaderboardRefreshToken} />
-        </div>
+        ) : (
+          <>
+            {/* Hero / Scan form */}
+            <ScanForm
+              onScanComplete={wrappedComplete}
+              onScanStart={handleScanStart}
+              onScanError={wrappedError}
+            />
 
-        {/* Results */}
-        {scanData && (
-          <div id="results">
-            <ScanResults data={scanData} />
-          </div>
+            {/* Terminal-style scan progress */}
+            <ScanProgress active={scanning} />
+
+            {/* Results */}
+            {scanData && (
+              <div id="results">
+                <ScanResults data={scanData} />
+              </div>
+            )}
+
+            {/* Recent scans */}
+            <RecentScans
+              onSelectScan={handleSelectRecentScan}
+              activeScanId={activeScanId}
+            />
+          </>
         )}
-
-        {/* Recent scans */}
-        <RecentScans
-          onSelectScan={handleSelectRecentScan}
-          activeScanId={activeScanId}
-        />
       </main>
 
       {/* Footer */}
