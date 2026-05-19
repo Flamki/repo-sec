@@ -30,6 +30,7 @@ from scanner.secrets_scanner import scan_secrets
 from scanner.dependency_scanner import scan_dependencies
 from scanner.misconfig_scanner import scan_misconfigs
 from scanner.sast_scanner import scan_sast
+from scanner.iac_scanner import scan_iac
 from scanner.scorecard import compute_scorecard
 
 
@@ -289,20 +290,22 @@ async def run_scan(req: ScanRequest):
             status_code=502,
         )
 
-    # 4-7. Run scan stages (4-stage pipeline)
+    # 4-8. Run scan stages (5-stage pipeline)
     secret_findings = scan_secrets(files)
 
     try:
         dep_findings = await scan_dependencies(files)
     except Exception:
-        dep_findings = []  # Don't fail entire scan if OSV.dev is down
+        dep_findings = []  # Don't fail entire scan if OSV.dev/EPSS is down
 
     misconfig_findings = scan_misconfigs(files, tree)
     sast_findings = scan_sast(files)
+    iac_findings = scan_iac(files)
 
-    # 8. Aggregate
+    # 9. Aggregate
     all_findings: List[Finding] = (
-        secret_findings + dep_findings + misconfig_findings + sast_findings
+        secret_findings + dep_findings + misconfig_findings
+        + sast_findings + iac_findings
     )
     overall_severity = _calculate_overall_severity(all_findings)
     fix_suggestions = _generate_fix_suggestions(all_findings)

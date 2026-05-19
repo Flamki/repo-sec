@@ -223,8 +223,48 @@ def _extract_fix_version(vuln: dict, pkg_name: str) -> Optional[str]:
     return None
 
 
+async def _fetch_epss_scores(cve_ids: List[str], client: httpx.AsyncClient) -> Dict[str, dict]:
+    """Fetch EPSS exploit probability scores from FIRST.org API.
+
+    Returns dict of CVE-ID -> {epss: float, percentile: float}.
+    EPSS = probability of exploitation in next 30 days (0-1).
+    """
+    if not cve_ids:
+        return {}
+
+    epss_map = {}
+    # EPSS API accepts comma-separated CVEs
+    batch_size = 50
+    for i in range(0, len(cve_ids), batch_size):
+        batch = cve_ids[i:i + batch_size]
+        cve_param = ",".join(batch)
+        try:
+            resp = await client.get(
+                f"https://api.first.org/data/v1/epss?cve={cve_param}",
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json().get("data", [])
+                for entry in data:
+                    cve = entry.get("cve", "")
+                    try:
+                        epss_map[cve] = {
+                            "epss": float(entry.get("epss", 0)),
+                            "percentile": float(entry.get("percentile", 0)),
+                        }
+                    except (ValueError, TypeError):
+                        pass
+        except (httpx.HTTPError, httpx.TimeoutException, Exception):
+            pass
+
+    return epss_map
+
+
 async def scan_dependencies(files: Dict[str, str]) -> List[Finding]:
-    """Scan dependency manifests for known vulnerabilities via OSV.dev."""
+    """Scan dependency manifests for known vulnerabilities via OSV.dev.
+
+    Enriches findings with EPSS exploit probability scores from FIRST.org.
+    """
     packages = _extract_packages(files)
     if not packages:
         return []
@@ -242,8 +282,11 @@ async def scan_dependencies(files: Dict[str, str]) -> List[Finding]:
         })
         pkg_map.append((name, version, ecosystem, source_file))
 
-    # Query in batches
+    # Query OSV.dev + EPSS in parallel
     async with httpx.AsyncClient(timeout=20.0) as client:
+        # --- Phase 1: OSV.dev batch query ---
+        cve_ids_found = []
+
         for batch_start in range(0, len(queries), BATCH_SIZE):
             batch_queries = queries[batch_start:batch_start + BATCH_SIZE]
             batch_pkgs = pkg_map[batch_start:batch_start + BATCH_SIZE]
@@ -287,6 +330,7 @@ async def scan_dependencies(files: Dict[str, str]) -> List[Finding]:
                     evidence_parts = [f"Package: {name}@{version} ({ecosystem})"]
                     if cve_id:
                         evidence_parts.append(f"CVE: {cve_id}")
+                        cve_ids_found.append(cve_id)
                     if cvss_score is not None:
                         evidence_parts.append(f"CVSS: {cvss_score}")
                     if fix_version:
@@ -304,4 +348,22 @@ async def scan_dependencies(files: Dict[str, str]) -> List[Finding]:
                         cve=cve_id,
                     ))
 
+        # --- Phase 2: EPSS enrichment ---
+        if cve_ids_found:
+            epss_scores = await _fetch_epss_scores(cve_ids_found, client)
+
+            # Enrich findings with EPSS data
+            for finding in findings:
+                if finding.cve and finding.cve in epss_scores:
+                    epss = epss_scores[finding.cve]
+                    prob = epss["epss"]
+                    pctl = epss["percentile"]
+                    epss_tag = f"EPSS: {prob:.1%} exploit probability (top {pctl:.0%})"
+                    finding.evidence = f"{finding.evidence} | {epss_tag}"
+
+                    # Upgrade severity if EPSS is very high
+                    if prob > 0.5 and finding.severity == SeverityLevel.MEDIUM:
+                        finding.severity = SeverityLevel.HIGH
+
     return findings
+

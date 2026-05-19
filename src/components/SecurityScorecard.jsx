@@ -1,8 +1,9 @@
 import React from 'react'
+import RadarChart from './RadarChart.jsx'
 
 /**
  * Security Scorecard — OSSF-inspired repository health visualization.
- * Shows an overall grade (A-F) and individual check scores as progress bars.
+ * Shows an overall grade (A-F), radar chart, and individual check scores.
  */
 
 const WEIGHT_COLORS = {
@@ -45,44 +46,51 @@ export default function SecurityScorecard({ scorecard }) {
         </div>
       </div>
 
-      <div className="scorecard-checks">
-        {scorecard.checks.map((check, i) => {
-          const pct = (check.score / check.maxScore) * 100
-          const color = check.score >= 8 ? '#00ff88'
-            : check.score >= 5 ? '#ffaa00'
-            : check.score > 0 ? '#ff6b35'
-            : '#ff3355'
+      {/* Radar + Checks layout */}
+      <div className="scorecard-body">
+        <div className="scorecard-radar">
+          <RadarChart scorecard={scorecard} />
+        </div>
 
-          return (
-            <div key={i} className="scorecard-check">
-              <div className="check-header">
-                <span className="check-name">{check.name}</span>
-                <div className="check-meta">
-                  <span
-                    className="check-weight"
-                    style={{ color: WEIGHT_COLORS[check.weight] || '#5f6368' }}
-                  >
-                    {check.weight}
-                  </span>
-                  <span className="check-score" style={{ color }}>
-                    {check.score}/{check.maxScore}
-                  </span>
+        <div className="scorecard-checks">
+          {scorecard.checks.map((check, i) => {
+            const pct = (check.score / check.maxScore) * 100
+            const color = check.score >= 8 ? '#00ff88'
+              : check.score >= 5 ? '#ffaa00'
+              : check.score > 0 ? '#ff6b35'
+              : '#ff3355'
+
+            return (
+              <div key={i} className="scorecard-check">
+                <div className="check-header">
+                  <span className="check-name">{check.name}</span>
+                  <div className="check-meta">
+                    <span
+                      className="check-weight"
+                      style={{ color: WEIGHT_COLORS[check.weight] || '#5f6368' }}
+                    >
+                      {check.weight}
+                    </span>
+                    <span className="check-score" style={{ color }}>
+                      {check.score}/{check.maxScore}
+                    </span>
+                  </div>
                 </div>
+                <div className="check-bar-track">
+                  <div
+                    className="check-bar-fill"
+                    style={{
+                      width: `${pct}%`,
+                      background: `linear-gradient(90deg, ${color}88, ${color})`,
+                      boxShadow: `0 0 8px ${color}40`,
+                    }}
+                  />
+                </div>
+                <div className="check-reason">{check.reason}</div>
               </div>
-              <div className="check-bar-track">
-                <div
-                  className="check-bar-fill"
-                  style={{
-                    width: `${pct}%`,
-                    background: `linear-gradient(90deg, ${color}88, ${color})`,
-                    boxShadow: `0 0 8px ${color}40`,
-                  }}
-                />
-              </div>
-              <div className="check-reason">{check.reason}</div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </div>
   )

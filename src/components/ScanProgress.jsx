@@ -8,13 +8,15 @@ import React, { useState, useEffect, useRef } from 'react'
 const STAGES = [
   { id: 'connect', text: 'Connecting to GitHub API', duration: 800 },
   { id: 'tree', text: 'Fetching repository file tree', duration: 1200 },
-  { id: 'download', text: 'Downloading scannable files · 20x concurrent', duration: 3000 },
-  { id: 'secrets', text: 'Running secrets detection · 30+ regex patterns + entropy', duration: 2000 },
-  { id: 'sast', text: 'SAST code analysis · OWASP Top 10 · CWE matching', duration: 2500 },
-  { id: 'osv', text: 'Querying OSV.dev vulnerability database · batch API', duration: 4000 },
-  { id: 'misconfig', text: 'Scanning misconfigurations · IaC + CI/CD checks', duration: 1500 },
-  { id: 'scorecard', text: 'Computing Security Scorecard · 10 weighted checks', duration: 1200 },
-  { id: 'analyze', text: 'Generating fix suggestions + remediation plan', duration: 1500 },
+  { id: 'download', text: 'Downloading scannable files · 20x concurrent', duration: 2500 },
+  { id: 'secrets', text: 'Running secrets detection · 30+ regex patterns + entropy', duration: 1500 },
+  { id: 'sast', text: 'SAST code analysis · OWASP Top 10 · CWE matching', duration: 2000 },
+  { id: 'iac', text: 'IaC security scan · Kubernetes · Terraform · Docker', duration: 1500 },
+  { id: 'osv', text: 'Querying OSV.dev vulnerability database · batch API', duration: 3000 },
+  { id: 'epss', text: 'Fetching EPSS exploit probability scores · FIRST.org', duration: 2000 },
+  { id: 'misconfig', text: 'Scanning misconfigurations · CI/CD + config checks', duration: 1200 },
+  { id: 'scorecard', text: 'Computing Security Scorecard · 10 weighted checks', duration: 1000 },
+  { id: 'analyze', text: 'Generating fix suggestions + remediation plan', duration: 1200 },
 ]
 
 export default function ScanProgress({ active }) {

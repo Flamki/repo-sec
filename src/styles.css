@@ -1649,8 +1649,42 @@ body {
   color: var(--text-muted);
 }
 
+.scorecard-body {
+  display: flex;
+  gap: 20px;
+  padding: 16px 20px 20px;
+  align-items: flex-start;
+}
+
+.scorecard-radar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-chart-wrap {
+  width: 240px;
+  height: 240px;
+}
+
+.radar-chart-svg {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .scorecard-body {
+    flex-direction: column;
+    align-items: center;
+  }
+  .scorecard-radar {
+    order: -1;
+  }
+}
+
 .scorecard-checks {
-  padding: 12px 20px 20px;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
