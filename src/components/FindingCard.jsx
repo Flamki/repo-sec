@@ -6,6 +6,7 @@ const TYPE_ICONS = {
   SECRET: '🔑',
   VULNERABILITY: '⚠',
   MISCONFIGURATION: '⚙',
+  CODE_ISSUE: '🔍',
 }
 
 export default function FindingCard({ finding, fixSuggestion, index }) {
@@ -69,6 +70,28 @@ export default function FindingCard({ finding, fixSuggestion, index }) {
                     }}
                   >
                     {finding.cve}
+                    <ExternalLink size={9} />
+                  </a>
+                )}
+                {finding.cwe && (
+                  <a
+                    href={`https://cwe.mitre.org/data/definitions/${finding.cwe.replace('CWE-','')}.html`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '10px',
+                      color: '#ffaa00',
+                      textDecoration: 'none',
+                      border: '1px solid rgba(255,170,0,0.3)',
+                      borderRadius: '4px',
+                      padding: '1px 6px',
+                    }}
+                  >
+                    {finding.cwe}
                     <ExternalLink size={9} />
                   </a>
                 )}

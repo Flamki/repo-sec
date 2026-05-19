@@ -29,6 +29,8 @@ from scanner.github_fetcher import parse_repo_url, fetch_file_tree, download_fil
 from scanner.secrets_scanner import scan_secrets
 from scanner.dependency_scanner import scan_dependencies
 from scanner.misconfig_scanner import scan_misconfigs
+from scanner.sast_scanner import scan_sast
+from scanner.scorecard import compute_scorecard
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +145,20 @@ _FIX_TEMPLATES = {
         "resources": [
             "https://cheatsheetseries.owasp.org/",
             "https://docs.docker.com/develop/security-best-practices/",
+        ],
+    },
+    FindingType.CODE_ISSUE: {
+        "action": "Remediate the code security issue",
+        "detail": (
+            "1. Review the flagged code pattern and understand the vulnerability class (see CWE reference). "
+            "2. Apply the secure coding alternative described in the finding. "
+            "3. Use parameterized queries for SQL, safe APIs for OS commands, and input validation for user data. "
+            "4. Add SAST tools (Semgrep, CodeQL) to your CI pipeline to catch these patterns automatically."
+        ),
+        "resources": [
+            "https://cheatsheetseries.owasp.org/",
+            "https://semgrep.dev/docs/",
+            "https://cwe.mitre.org/",
         ],
     },
 }
@@ -273,7 +289,7 @@ async def run_scan(req: ScanRequest):
             status_code=502,
         )
 
-    # 4-6. Run scan stages
+    # 4-7. Run scan stages (4-stage pipeline)
     secret_findings = scan_secrets(files)
 
     try:
@@ -282,11 +298,17 @@ async def run_scan(req: ScanRequest):
         dep_findings = []  # Don't fail entire scan if OSV.dev is down
 
     misconfig_findings = scan_misconfigs(files, tree)
+    sast_findings = scan_sast(files)
 
-    # 7. Aggregate
-    all_findings: List[Finding] = secret_findings + dep_findings + misconfig_findings
+    # 8. Aggregate
+    all_findings: List[Finding] = (
+        secret_findings + dep_findings + misconfig_findings + sast_findings
+    )
     overall_severity = _calculate_overall_severity(all_findings)
     fix_suggestions = _generate_fix_suggestions(all_findings)
+
+    # 9. Compute Security Scorecard
+    scorecard = compute_scorecard(files, tree, all_findings)
 
     duration_ms = int((time.time() - start_time) * 1000)
 
@@ -301,6 +323,7 @@ async def run_scan(req: ScanRequest):
         findingsCount=len(all_findings),
         scannedAt=datetime.now(timezone.utc).isoformat(),
         durationMs=duration_ms,
+        scorecard=scorecard,
     )
 
     # Store result

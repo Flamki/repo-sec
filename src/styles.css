@@ -1560,6 +1560,165 @@ body {
 }
 
 /* ========================
+   SECURITY SCORECARD
+   ======================== */
+
+.scorecard {
+  margin-top: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  overflow: hidden;
+  animation: fadeInUp 0.4s ease;
+}
+
+.scorecard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.scorecard-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scorecard-icon {
+  font-size: 18px;
+}
+
+.scorecard-title {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8eaed;
+}
+
+.scorecard-subtitle {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.scorecard-grade-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scorecard-grade {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.scorecard-overall {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.scorecard-score {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.scorecard-max {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.scorecard-checks {
+  padding: 12px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scorecard-check {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.check-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.check-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #e8eaed;
+  letter-spacing: 0.02em;
+}
+
+.check-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check-weight {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.check-score {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.check-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.check-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+.check-reason {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ========================
    ANIMATIONS
    ======================== */
 

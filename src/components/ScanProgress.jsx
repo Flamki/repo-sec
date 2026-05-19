@@ -8,11 +8,13 @@ import React, { useState, useEffect, useRef } from 'react'
 const STAGES = [
   { id: 'connect', text: 'Connecting to GitHub API', duration: 800 },
   { id: 'tree', text: 'Fetching repository file tree', duration: 1200 },
-  { id: 'download', text: 'Downloading scannable files', duration: 3000 },
-  { id: 'secrets', text: 'Running secrets detection · 30+ patterns', duration: 2500 },
-  { id: 'osv', text: 'Querying OSV.dev vulnerability database', duration: 4000 },
-  { id: 'misconfig', text: 'Checking misconfigurations', duration: 1500 },
-  { id: 'analyze', text: 'Analyzing results · generating fix suggestions', duration: 2000 },
+  { id: 'download', text: 'Downloading scannable files · 20x concurrent', duration: 3000 },
+  { id: 'secrets', text: 'Running secrets detection · 30+ regex patterns + entropy', duration: 2000 },
+  { id: 'sast', text: 'SAST code analysis · OWASP Top 10 · CWE matching', duration: 2500 },
+  { id: 'osv', text: 'Querying OSV.dev vulnerability database · batch API', duration: 4000 },
+  { id: 'misconfig', text: 'Scanning misconfigurations · IaC + CI/CD checks', duration: 1500 },
+  { id: 'scorecard', text: 'Computing Security Scorecard · 10 weighted checks', duration: 1200 },
+  { id: 'analyze', text: 'Generating fix suggestions + remediation plan', duration: 1500 },
 ]
 
 export default function ScanProgress({ active }) {

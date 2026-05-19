@@ -17,6 +17,7 @@ class FindingType(str, Enum):
     SECRET = "SECRET"
     VULNERABILITY = "VULNERABILITY"
     MISCONFIGURATION = "MISCONFIGURATION"
+    CODE_ISSUE = "CODE_ISSUE"
 
 
 class Finding(BaseModel):
@@ -29,6 +30,7 @@ class Finding(BaseModel):
     line: Optional[int] = None
     evidence: Optional[str] = None
     cve: Optional[str] = None
+    cwe: Optional[str] = None  # CWE reference for SAST findings
 
 
 class FixSuggestion(BaseModel):
@@ -37,6 +39,20 @@ class FixSuggestion(BaseModel):
     action: str
     detail: str
     resources: List[str] = []
+
+
+class ScorecardCheck(BaseModel):
+    name: str
+    score: int  # 0-10
+    maxScore: int  # always 10
+    reason: str
+    weight: str  # "critical", "high", "medium", "low"
+
+
+class SecurityScorecard(BaseModel):
+    overallScore: float  # 0-10
+    checks: List[ScorecardCheck]
+    grade: str  # A, B, C, D, F
 
 
 class ScanResult(BaseModel):
@@ -50,6 +66,7 @@ class ScanResult(BaseModel):
     findingsCount: int
     scannedAt: str
     durationMs: int
+    scorecard: Optional[SecurityScorecard] = None
 
 
 class ScanRequest(BaseModel):

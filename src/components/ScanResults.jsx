@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, FileCode, Clock, Download } from 'lucide-re
 import SeverityBadge from './SeverityBadge.jsx'
 import FindingCard from './FindingCard.jsx'
 import ThreatGauge from './ThreatGauge.jsx'
+import SecurityScorecard from './SecurityScorecard.jsx'
 
 function useCountUp(target, duration = 800) {
   const [count, setCount] = useState(0)
@@ -28,6 +29,7 @@ function useCountUp(target, duration = 800) {
 const TABS = [
   { key: 'SECRET', label: 'Secrets', icon: '🔑' },
   { key: 'VULNERABILITY', label: 'Vulnerabilities', icon: '⚠' },
+  { key: 'CODE_ISSUE', label: 'Code Issues', icon: '🔍' },
   { key: 'MISCONFIGURATION', label: 'Misconfigs', icon: '⚙' },
 ]
 
@@ -141,7 +143,7 @@ export default function ScanResults({ data }) {
             This repository passed all security checks. No secrets, vulnerabilities, or misconfigurations detected.
           </p>
           <div className="clean-checks">
-            {['Secrets scan', 'CVE matching', 'Misconfiguration audit', 'Dependency analysis'].map((c) => (
+            {['Secrets scan', 'CVE matching', 'SAST analysis', 'Misconfiguration audit', 'Dependency analysis'].map((c) => (
               <div key={c} className="clean-check-item">
                 <CheckCircle size={12} color="#00ff88" />
                 <span>{c}</span>
@@ -221,6 +223,11 @@ export default function ScanResults({ data }) {
                 })}
               </div>
             </div>
+          )}
+
+          {/* Security Scorecard */}
+          {data.scorecard && (
+            <SecurityScorecard scorecard={data.scorecard} />
           )}
         </>
       )}
