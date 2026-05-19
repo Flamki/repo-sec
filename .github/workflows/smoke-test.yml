@@ -62,7 +62,7 @@ jobs:
           PY
 
       - name: Failure alert webhook
-        if: failure() && secrets.SMOKE_ALERT_WEBHOOK_URL != ''
+        if: ${{ failure() && secrets.SMOKE_ALERT_WEBHOOK_URL != '' }}
         env:
           WEBHOOK_URL: ${{ secrets.SMOKE_ALERT_WEBHOOK_URL }}
         run: |
