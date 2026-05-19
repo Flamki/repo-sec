@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 10
     env:
       BASE_URL: ${{ github.event.inputs.base_url || 'https://repo-sec.getsolodesk.com' }}
+      SMOKE_ALERT_WEBHOOK_URL: ${{ secrets.SMOKE_ALERT_WEBHOOK_URL }}
     steps:
       - name: Health check
         run: |
@@ -62,9 +63,7 @@ jobs:
           PY
 
       - name: Failure alert webhook
-        if: ${{ failure() && secrets.SMOKE_ALERT_WEBHOOK_URL != '' }}
-        env:
-          WEBHOOK_URL: ${{ secrets.SMOKE_ALERT_WEBHOOK_URL }}
+        if: ${{ failure() && env.SMOKE_ALERT_WEBHOOK_URL != '' }}
         run: |
           payload=$(cat <<'JSON'
           {
@@ -76,6 +75,6 @@ jobs:
           }
           JSON
           )
-          curl -fsS -X POST "$WEBHOOK_URL" \
+          curl -fsS -X POST "$SMOKE_ALERT_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             --data "$payload"
