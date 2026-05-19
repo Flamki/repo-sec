@@ -1,0 +1,81 @@
+name: Production Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Target base URL (optional)"
+        required: false
+        default: "https://repo-sec.getsolodesk.com"
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_URL: ${{ github.event.inputs.base_url || 'https://repo-sec.getsolodesk.com' }}
+    steps:
+      - name: Health check
+        run: |
+          echo "Checking $BASE_URL/health"
+          curl -fsS "$BASE_URL/health" | tee health.json
+          python - <<'PY'
+          import json
+          with open("health.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          assert data.get("status") == "ok", data
+          print("Health check passed")
+          PY
+
+      - name: Scan endpoint check
+        run: |
+          echo "Checking $BASE_URL/scan"
+          curl -fsS -X POST "$BASE_URL/scan" \
+            -H "Content-Type: application/json" \
+            -d '{"repo_url":"https://github.com/octocat/Hello-World"}' \
+            | tee scan.json
+          python - <<'PY'
+          import json
+          with open("scan.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+          assert data.get("success") is True, data
+          assert "data" in data, data
+          print("Scan smoke test passed")
+          PY
+
+      - name: Leaderboard check
+        run: |
+          echo "Checking $BASE_URL/leaderboard"
+          curl -fsS "$BASE_URL/leaderboard" | tee leaderboard.json
+          python - <<'PY'
+          import json
+          with open("leaderboard.json", "r", encoding="utf-8") as f:
+              body = json.load(f)
+          assert body.get("success") is True, body
+          rows = body.get("data", [])
+          assert isinstance(rows, list), body
+          names = [r.get("repoName") for r in rows if isinstance(r, dict)]
+          assert len(names) == len(set(names)), "Duplicate repos found in leaderboard"
+          print("Leaderboard check passed")
+          PY
+
+      - name: Failure alert webhook
+        if: failure() && secrets.SMOKE_ALERT_WEBHOOK_URL != ''
+        env:
+          WEBHOOK_URL: ${{ secrets.SMOKE_ALERT_WEBHOOK_URL }}
+        run: |
+          payload=$(cat <<'JSON'
+          {
+            "text": "repo-sec smoke test failed",
+            "repo": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}",
+            "run_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          JSON
+          )
+          curl -fsS -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            --data "$payload"

@@ -109,6 +109,40 @@ curl -X POST http://localhost:8000/scan \
 
 ---
 
+## Production Deployment (Vercel)
+
+Live app:
+- `https://repo-sec.getsolodesk.com`
+- `https://repo-sec.vercel.app`
+
+Redeploy:
+```bash
+vercel deploy --prod --yes
+```
+
+Optional production CORS lock-down (recommended):
+```bash
+# Vercel Project Environment Variable
+CORS_ORIGINS=https://repo-sec.getsolodesk.com,https://repo-sec.vercel.app
+```
+
+If `CORS_ORIGINS` is not set, backend defaults to `*` for easier local development.
+
+Optional `/scan` rate-limit tuning:
+```bash
+# defaults: 8 requests / 60 seconds per client IP
+SCAN_RATE_LIMIT_REQUESTS=8
+SCAN_RATE_LIMIT_WINDOW_SEC=60
+```
+
+Automated smoke tests:
+- GitHub Actions workflow: `.github/workflows/smoke-test.yml`
+- Runs every 30 minutes and on manual trigger (`workflow_dispatch`)
+- Verifies `GET /health`, `POST /scan`, and `GET /leaderboard` on the live URL
+- Optional failure alert: add repository secret `SMOKE_ALERT_WEBHOOK_URL`
+
+---
+
 ## API Reference
 
 ### `POST /scan`
@@ -154,6 +188,12 @@ Scan a GitHub repository for security issues.
 ### `GET /scans`
 
 List recent scan results (up to 50).
+
+### `GET /leaderboard`
+
+Unique leaderboard (latest scan only per repo) with:
+- `repoName`
+- `score`
 
 ### `GET /health`
 

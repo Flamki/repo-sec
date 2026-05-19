@@ -12,11 +12,13 @@ import uuid
 import time
 import json
 import os
+import threading
 from datetime import datetime, timezone
-from typing import List, Optional
+from collections import defaultdict, deque
+from typing import Deque, Dict, List, Optional, Tuple
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
@@ -50,10 +52,25 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+
+def _parse_cors_origins() -> List[str]:
+    """Read CORS origins from env.
+
+    Example:
+    CORS_ORIGINS=https://repo-sec.getsolodesk.com,https://repo-sec.vercel.app
+    """
+    raw = os.environ.get("CORS_ORIGINS", "*").strip()
+    if not raw or raw == "*":
+        return ["*"]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+_cors_origins = _parse_cors_origins()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -71,6 +88,57 @@ def _store_scan(result: dict):
     _scans.insert(0, result)
     while len(_scans) > MAX_STORED_SCANS:
         _scans.pop()
+
+
+# ---------------------------------------------------------------------------
+# Best-effort in-memory rate limit for /scan
+# ---------------------------------------------------------------------------
+
+_rate_limit_lock = threading.Lock()
+_scan_requests: Dict[str, Deque[float]] = defaultdict(deque)
+
+
+def _read_int_env(name: str, default: int, minimum: int) -> int:
+    """Read integer env var with sane fallback."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(value, minimum)
+
+
+SCAN_RATE_LIMIT_REQUESTS = _read_int_env("SCAN_RATE_LIMIT_REQUESTS", 8, 1)
+SCAN_RATE_LIMIT_WINDOW_SEC = _read_int_env("SCAN_RATE_LIMIT_WINDOW_SEC", 60, 1)
+
+
+def _client_ip(req: Request) -> str:
+    """Best-effort client IP resolution behind proxies."""
+    forwarded = req.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip() or "unknown"
+    if req.client and req.client.host:
+        return req.client.host
+    return "unknown"
+
+
+def _check_scan_rate_limit(ip: str) -> Tuple[bool, int]:
+    """Return (allowed, retry_after_sec)."""
+    now = time.time()
+    cutoff = now - SCAN_RATE_LIMIT_WINDOW_SEC
+    with _rate_limit_lock:
+        bucket = _scan_requests[ip]
+        while bucket and bucket[0] < cutoff:
+            bucket.popleft()
+
+        if len(bucket) >= SCAN_RATE_LIMIT_REQUESTS:
+            retry_after = int(max(1, SCAN_RATE_LIMIT_WINDOW_SEC - (now - bucket[0])))
+            return False, retry_after
+
+        bucket.append(now)
+        return True, 0
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +296,33 @@ async def list_scans():
     return {"success": True, "data": _scans}
 
 
+@app.get("/leaderboard")
+async def leaderboard():
+    """Unique repo leaderboard by latest scan score."""
+    by_repo: Dict[str, dict] = {}
+
+    # _scans is newest-first; first occurrence is already latest for a repo
+    for scan in _scans:
+        repo = (scan.get("repoName") or "").strip()
+        if not repo or repo in by_repo:
+            continue
+        scorecard = scan.get("scorecard") or {}
+        score = scorecard.get("overallScore")
+        try:
+            score = round(float(score), 1)
+        except (ValueError, TypeError):
+            score = None
+
+        by_repo[repo] = {
+            "repoName": repo,
+            "score": score,
+        }
+
+    rows = list(by_repo.values())
+    rows.sort(key=lambda r: (r["score"] is None, -(r["score"] or -1), r["repoName"].lower()))
+    return {"success": True, "data": rows[:50]}
+
+
 @app.get("/scans/{scan_id}")
 async def get_scan(scan_id: str):
     """Get a specific scan result by ID."""
@@ -238,7 +333,7 @@ async def get_scan(scan_id: str):
 
 
 @app.post("/scan")
-async def run_scan(req: ScanRequest):
+async def run_scan(req: ScanRequest, request: Request):
     """Execute a full security scan on a GitHub repository.
 
     Pipeline:
@@ -250,6 +345,22 @@ async def run_scan(req: ScanRequest):
     6. Run misconfiguration detection
     7. Aggregate findings and generate fix suggestions
     """
+    ip = _client_ip(request)
+    allowed, retry_after_sec = _check_scan_rate_limit(ip)
+    if not allowed:
+        return JSONResponse(
+            {
+                "success": False,
+                "error": (
+                    f"Rate limit exceeded for /scan. Max {SCAN_RATE_LIMIT_REQUESTS} "
+                    f"request(s) per {SCAN_RATE_LIMIT_WINDOW_SEC}s."
+                ),
+                "retryAfterSec": retry_after_sec,
+            },
+            status_code=429,
+            headers={"Retry-After": str(retry_after_sec)},
+        )
+
     start_time = time.time()
 
     # 1. Parse URL
@@ -290,17 +401,44 @@ async def run_scan(req: ScanRequest):
             status_code=502,
         )
 
-    # 4-8. Run scan stages (5-stage pipeline)
-    secret_findings = scan_secrets(files)
+    # 4-8. Run 5 scan engines in PARALLEL (async + threadpool)
+    import asyncio
 
-    try:
-        dep_findings = await scan_dependencies(files)
-    except Exception:
-        dep_findings = []  # Don't fail entire scan if OSV.dev/EPSS is down
+    loop = asyncio.get_event_loop()
 
-    misconfig_findings = scan_misconfigs(files, tree)
-    sast_findings = scan_sast(files)
-    iac_findings = scan_iac(files)
+    # Wrap synchronous scanners to run in thread executor (non-blocking)
+    async def _run_secrets():
+        return await loop.run_in_executor(None, scan_secrets, files)
+
+    async def _run_sast():
+        return await loop.run_in_executor(None, scan_sast, files)
+
+    async def _run_iac():
+        return await loop.run_in_executor(None, scan_iac, files)
+
+    async def _run_misconfigs():
+        return await loop.run_in_executor(None, scan_misconfigs, files, tree)
+
+    async def _run_deps():
+        try:
+            return await scan_dependencies(files)
+        except Exception:
+            return []  # Don't fail entire scan if OSV.dev/EPSS is down
+
+    # Execute ALL scanners simultaneously
+    secrets_task, deps_task, misconfig_task, sast_task, iac_task = await asyncio.gather(
+        _run_secrets(),
+        _run_deps(),
+        _run_misconfigs(),
+        _run_sast(),
+        _run_iac(),
+    )
+
+    secret_findings = secrets_task
+    dep_findings = deps_task
+    misconfig_findings = misconfig_task
+    sast_findings = sast_task
+    iac_findings = iac_task
 
     # 9. Aggregate
     all_findings: List[Finding] = (

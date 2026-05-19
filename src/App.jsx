@@ -4,6 +4,7 @@ import ScanForm from './components/ScanForm.jsx'
 import ScanResults from './components/ScanResults.jsx'
 import RecentScans from './components/RecentScans.jsx'
 import ScanProgress from './components/ScanProgress.jsx'
+import Leaderboard from './components/Leaderboard.jsx'
 import './styles.css'
 
 function useApiHealth() {
@@ -30,11 +31,13 @@ export default function App() {
   const [scanData, setScanData] = useState(null)
   const [scanning, setScanning] = useState(false)
   const [activeScanId, setActiveScanId] = useState(null)
+  const [leaderboardRefreshToken, setLeaderboardRefreshToken] = useState(0)
   const apiAlive = useApiHealth()
 
   const handleScanComplete = useCallback((data) => {
     setScanData(data)
     setActiveScanId(data.scanId)
+    setLeaderboardRefreshToken((n) => n + 1)
     // Scroll to results
     setTimeout(() => {
       document.getElementById('results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -136,6 +139,8 @@ export default function App() {
           onSelectScan={handleSelectRecentScan}
           activeScanId={activeScanId}
         />
+
+        <Leaderboard refreshToken={leaderboardRefreshToken} />
       </main>
 
       {/* Footer */}

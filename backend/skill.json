@@ -55,6 +55,11 @@
     },
     {
       "method": "GET",
+      "path": "/leaderboard",
+      "description": "List unique repositories with latest score (no duplicates)"
+    },
+    {
+      "method": "GET",
       "path": "/scans/{scan_id}",
       "description": "Get a specific scan result by ID"
     },

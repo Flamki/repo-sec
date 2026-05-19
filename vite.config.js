@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: {
       '/scan': 'http://localhost:8000',
       '/scans': 'http://localhost:8000',
+      '/leaderboard': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
       '/skill.json': 'http://localhost:8000',
       '/docs': 'http://localhost:8000',
