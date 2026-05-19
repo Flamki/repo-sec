@@ -99,6 +99,9 @@ export default function App() {
           </div>
 
           <div className="header-right">
+            <a href="#leaderboard" className="header-link">
+              Leaderboard
+            </a>
             <a href="/docs" className="header-link" target="_blank" rel="noopener noreferrer">
               Swagger Docs
             </a>
@@ -127,6 +130,11 @@ export default function App() {
         {/* Terminal-style scan progress */}
         <ScanProgress active={scanning} />
 
+        {/* Leaderboard (top section) */}
+        <div id="leaderboard">
+          <Leaderboard refreshToken={leaderboardRefreshToken} />
+        </div>
+
         {/* Results */}
         {scanData && (
           <div id="results">
@@ -139,8 +147,6 @@ export default function App() {
           onSelectScan={handleSelectRecentScan}
           activeScanId={activeScanId}
         />
-
-        <Leaderboard refreshToken={leaderboardRefreshToken} />
       </main>
 
       {/* Footer */}
