@@ -12,6 +12,9 @@ export default defineConfig({
       '/scans': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
       '/skill.json': 'http://localhost:8000',
+      '/docs': 'http://localhost:8000',
+      '/redoc': 'http://localhost:8000',
+      '/openapi.json': 'http://localhost:8000',
     }
   },
   preview: {

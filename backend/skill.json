@@ -1,0 +1,69 @@
+{
+  "skill_name": "repo-sec",
+  "display_name": "repo-sec · AI-Powered Security Scanner",
+  "description": "Scans any public GitHub repository for hardcoded secrets, vulnerable dependencies, and security misconfigurations. Returns structured findings with severity levels, CVE references, and prioritized fix suggestions.",
+  "version": "1.0.0",
+  "author": "Shubham Sharma",
+  "tags": ["security", "scanner", "github", "secrets", "vulnerabilities", "CVE", "misconfigurations"],
+  "capabilities": [
+    "Detect hardcoded API keys, tokens, and credentials (30+ patterns)",
+    "Scan dependencies against OSV.dev vulnerability database",
+    "Flag common misconfigurations (.env files, Dockerfile issues, debug mode)",
+    "Provide prioritized remediation suggestions with resource links"
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/scan",
+      "description": "Scan a GitHub repository for security issues",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "repo_url": {
+            "type": "string",
+            "description": "Full GitHub repository URL (e.g., https://github.com/owner/repo)"
+          }
+        },
+        "required": ["repo_url"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "scanId": { "type": "string" },
+              "repoUrl": { "type": "string" },
+              "repoName": { "type": "string" },
+              "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "CLEAN"] },
+              "findings": { "type": "array" },
+              "fixSuggestions": { "type": "array" },
+              "filesScanned": { "type": "integer" },
+              "findingsCount": { "type": "integer" },
+              "scannedAt": { "type": "string", "format": "date-time" },
+              "durationMs": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/scans",
+      "description": "List recent scan results (up to 50)"
+    },
+    {
+      "method": "GET",
+      "path": "/scans/{scan_id}",
+      "description": "Get a specific scan result by ID"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "description": "Health check endpoint"
+    }
+  ],
+  "openapi_url": "/openapi.json",
+  "docs_url": "/docs"
+}

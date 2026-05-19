@@ -3,6 +3,7 @@ import { Shield, ExternalLink } from 'lucide-react'
 import ScanForm from './components/ScanForm.jsx'
 import ScanResults from './components/ScanResults.jsx'
 import RecentScans from './components/RecentScans.jsx'
+import ScanProgress from './components/ScanProgress.jsx'
 import './styles.css'
 
 function useApiHealth() {
@@ -120,15 +121,8 @@ export default function App() {
           onScanError={wrappedError}
         />
 
-        {/* Scanning overlay indicator */}
-        {scanning && (
-          <div className="scanning-indicator">
-            <div className="scanning-bar">
-              <div className="scanning-sweep" />
-            </div>
-            <span className="scanning-label">Deep scanning repository...</span>
-          </div>
-        )}
+        {/* Terminal-style scan progress */}
+        <ScanProgress active={scanning} />
 
         {/* Results */}
         {scanData && (

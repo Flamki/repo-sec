@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { CheckCircle, AlertTriangle, FileCode, Clock } from 'lucide-react'
+import { CheckCircle, AlertTriangle, FileCode, Clock, Download } from 'lucide-react'
 import SeverityBadge from './SeverityBadge.jsx'
 import FindingCard from './FindingCard.jsx'
+import ThreatGauge from './ThreatGauge.jsx'
 
 function useCountUp(target, duration = 800) {
   const [count, setCount] = useState(0)
@@ -57,48 +58,75 @@ export default function ScanResults({ data }) {
     }
   }, [data])
 
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `repo-sec-${repoName.replace('/', '-')}-${new Date().toISOString().slice(0,10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <section className="results-section">
       {/* Summary bar */}
       <div className="results-header">
-        <div className="results-repo-line">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,255,136,0.6)" strokeWidth="2">
-            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-          </svg>
-          <span className="results-repo-name">{repoName}</span>
-        </div>
-
-        <div className="results-stats-row">
-          <SeverityBadge severity={data.severity || 'CLEAN'} size="lg" pulse={!isClean} />
-
-          <div className="results-stats">
-            <div className="stat-item">
-              <FileCode size={13} color="#5f6368" />
-              <span className="stat-value">{filesCount}</span>
-              <span className="stat-label">files scanned</span>
+        <div className="results-header-top">
+          <div className="results-header-left">
+            <div className="results-repo-line">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,255,136,0.6)" strokeWidth="2">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+              </svg>
+              <span className="results-repo-name">{repoName}</span>
             </div>
-            <div className="stat-divider" />
-            <div className="stat-item">
-              <AlertTriangle size={13} color="#5f6368" />
-              <span className="stat-value" style={{ color: findingsCount > 0 ? '#ff3355' : '#00ff88' }}>
-                {findingsCount}
-              </span>
-              <span className="stat-label">findings</span>
+
+            <div className="results-stats-row">
+              <SeverityBadge severity={data.severity || 'CLEAN'} size="lg" pulse={!isClean} />
+
+              <div className="results-stats">
+                <div className="stat-item">
+                  <FileCode size={13} color="#5f6368" />
+                  <span className="stat-value">{filesCount}</span>
+                  <span className="stat-label">files scanned</span>
+                </div>
+                <div className="stat-divider" />
+                <div className="stat-item">
+                  <AlertTriangle size={13} color="#5f6368" />
+                  <span className="stat-value" style={{ color: findingsCount > 0 ? '#ff3355' : '#00ff88' }}>
+                    {findingsCount}
+                  </span>
+                  <span className="stat-label">findings</span>
+                </div>
+                <div className="stat-divider" />
+                <div className="stat-item">
+                  <Clock size={13} color="#5f6368" />
+                  <span className="stat-value">{durationSec}s</span>
+                  <span className="stat-label">scan time</span>
+                </div>
+              </div>
             </div>
-            <div className="stat-divider" />
-            <div className="stat-item">
-              <Clock size={13} color="#5f6368" />
-              <span className="stat-value">{durationSec}s</span>
-              <span className="stat-label">scan time</span>
+
+            <div className="results-meta-row">
+              {data.scannedAt && (
+                <span className="results-timestamp">
+                  Scanned at {new Date(data.scannedAt).toLocaleString()}
+                </span>
+              )}
+              <button className="export-btn" onClick={handleExport} title="Download full scan report as JSON">
+                <Download size={12} />
+                <span>Export Report</span>
+              </button>
             </div>
           </div>
-        </div>
 
-        {data.scannedAt && (
-          <div className="results-timestamp">
-            Scanned at {new Date(data.scannedAt).toLocaleString()}
-          </div>
-        )}
+          {/* Threat Gauge */}
+          {!isClean && (
+            <div className="results-header-gauge">
+              <ThreatGauge findings={data.findings} severity={data.severity} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* CLEAN state */}
